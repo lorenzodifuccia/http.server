@@ -1,6 +1,8 @@
 # http.server 
 A (_beautiful_) replacement for the `http.server` Python3 module.  
 
+`pip3 install beautify-http-server`
+
 Features:
 - File download 🤷‍♂️
 - File **upload** 🤩
@@ -26,7 +28,7 @@ Features:
 <br/>
 
 ## Usage
-After installation (`pip3 install beauty-http-server`, see below), run:
+After installation (`pip3 install beautify-http-server`, see below), run:
 ```bash
 $ # to serve current working directory, on 127.0.0.1:8000
 $ http.server
@@ -55,7 +57,7 @@ optional arguments:
 ## Installation
 As easy as:
 ```bash
-$ pip3 install beauty-http-server
+$ pip3 install beautify-http-server
 ```
 
 Otherwise:
