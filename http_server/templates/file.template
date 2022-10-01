@@ -1,0 +1,189 @@
+{% extends "base.template" %}
+{% block title %}File: {{ element.name }}{% endblock %}
+
+{% block main %}
+    <div class="container px-4 py-2 my-2 text-center">
+        <!-- File info -->
+        <div class="row mb-4 justify-content-around text-muted text-center" style="font-size:0.9rem!important;">
+          <div class="col-lg-3">
+              <b>Created: </b><div class="d-none d-lg-block w-100"></div>
+              <em>{{ element.ctime|datetime_format }} <div class="d-none d-lg-block w-100"></div>({{ element.ctime|datetime_humanize }})</em>
+          </div>
+          <div class="col-lg-3">
+              <b>Modified: </b><div class="d-none d-lg-block w-100"></div>
+              <em>{{ element.mtime|datetime_format }} <div class="d-none d-lg-block w-100"></div>({{ element.mtime|datetime_humanize }})</em>
+          </div>
+          <div class="col-lg-3"><b>Size: </b><div class="d-none d-lg-block w-100"></div><em>{{ element.size|filesizeformat }}</em></div>
+        </div>
+
+        <!-- Preview -->
+        <div id="embed-main-div"></div>
+
+        <!-- View on new tab -->
+        <a id="view-tab-btn" href="?embed=true" target="_blank" title="Open on a new tab" class="btn btn-dark fs-6" style="border-radius: 2rem;" hidden>
+            View <i class="bi bi-arrow-up-right-circle"></i>
+        </a>
+    </div>
+{% endblock %}
+
+{% block postscript %}
+    <script>
+    const embedMainDiv = document.getElementById("embed-main-div"),
+        viewTabBtn = document.getElementById("view-tab-btn"),
+        elementFile = {
+            name: "{{ element.name }}",
+            path: "{{ element.path }}",
+            mime: "{{ element.mime }}",
+            size: "{{ element.size }}",
+            src: window.location.pathname + "?embed=true"
+        };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        let elementHtml;
+
+        if (elementFile.mime === "application/pdf") {
+            elementHtml = document.createElement("embed");
+            elementHtml.src = elementFile.src;
+            elementHtml.type = "application/pdf"
+            elementHtml.style.width = "100%";
+            elementHtml.style.height = "800px";
+            embedMainDiv.appendChild(elementHtml);
+
+            // Mobile: show the View btn and hide the PDF embed element
+            let mobileBannerHtml = document.createElement("p");
+            mobileBannerHtml.classList.add("py-2");
+            mobileBannerHtml.innerHTML = "<em>Screen size too small, open on a new tab:</em>";
+            mobileBannerHtml.classList.add("d-lg-none");
+            embedMainDiv.appendChild(mobileBannerHtml);
+
+            viewTabBtn.classList.add("d-lg-none");
+            viewTabBtn.hidden = false;
+            elementHtml.classList.add("d-none", "d-lg-block");
+            return
+
+        } else if (elementFile.mime.endsWith("zip") || elementFile.mime.endsWith("tar")
+            || ["gzip", "bzip2", "xz"].includes(elementFile.mime) || window.location.hash.includes("zip")) {
+
+            elementHtml = document.createElement("ol");
+            elementHtml.classList.add("list-group", "list-group-numbered", "list-group-flush");
+
+            let formData = new FormData();
+            formData.append('path', elementFile.path);
+
+            fetch("/zip", {
+                method: "POST",
+                body: formData,
+            }).then(
+                resp => resp.json()
+            )
+                .then((resp) => {
+                    if (resp.status)
+                        nestedListFromZip(elementHtml, resp.structure)
+                    else
+                        alert("Error: " + resp.error)
+                })
+                .catch((err) => {
+                    alert("Error: " + err)
+                })
+
+            embedMainDiv.appendChild(elementHtml);
+            return
+
+        } else if (elementFile.mime.startsWith("image/")) {
+            elementHtml = document.createElement("img");
+            elementHtml.src = elementFile.src;
+
+        } else if (elementFile.mime.startsWith("video/")) {
+            elementHtml = document.createElement("video");
+            elementHtml.controls = true;
+            elementHtml.preload = "metadata";
+
+            let sourceElement = document.createElement("source");
+            sourceElement.src = elementFile.src;
+            elementHtml.appendChild(sourceElement);
+
+        } else if (elementFile.mime.startsWith("audio/")) {
+            elementHtml = document.createElement("audio");
+            elementHtml.controls = true;
+
+            let sourceElement = document.createElement("source");
+            sourceElement.src = elementFile.src;
+            elementHtml.appendChild(sourceElement);
+
+        } else if (elementFile.mime.startsWith("text/")
+            || ["bat", "cer", "crt", "gitignore", "js", "json", "md", "ovpn", "sh", "xhtml", "xml"]
+                .includes(elementFile.name.split(".").slice(-1)[0].toLowerCase())
+            || (elementFile.mime === "None" && elementFile.size < 10000000)) {
+
+            if (elementFile.mime === "None") {
+                elementHtml = document.createElement("p");
+                elementHtml.innerHTML = "<em>Unknown MIME type, showing text preview...</em>";
+                embedMainDiv.appendChild(elementHtml);
+            }
+
+            elementHtml = document.createElement("pre");
+            elementHtml.style.margin = "auto";
+            elementHtml.style.textAlign = "left";
+            elementHtml.style.wordWrap = "break-word";
+            elementHtml.style.whiteSpace = "pre-wrap";
+
+            fetch(elementFile.src)
+                .then((response) => response.text())
+                .then((text) => elementHtml.innerText = text)
+                .catch((error) => {
+                    alert(error);
+                    elementHtml.innerHTML = "<em>Error loading preview...</em>";
+                })
+
+        } else {
+            elementHtml = document.createElement("p");
+            elementHtml.classList.add("py-5");
+            elementHtml.innerHTML = "<em>Preview not available...</em>";
+            embedMainDiv.appendChild(elementHtml);
+
+            viewTabBtn.hidden = false;
+            return
+        }
+
+        elementHtml.style.maxHeight = "600px";
+        elementHtml.style.maxWidth = "100%";
+        embedMainDiv.appendChild(elementHtml);
+    });
+
+    // Zip functions
+    function nestedListFromZip(element, zipStructure) {
+        for (const [zipEntry, zipInfo] of Object.entries(zipStructure)) {
+            if (zipEntry.startsWith("_"))
+                continue
+
+            let itemElement = document.createElement("li");
+            itemElement.classList.add("list-group-item", zipInfo["_isdir"] ? "list-group-item-light" : "list-group-item-action",
+                "text-start", "text-break", "py-1");
+            itemElement.setAttribute("data-name", zipInfo["_path"]);
+            itemElement.innerText = zipEntry;
+
+            let sizeElement = document.createElement("em");
+            sizeElement.classList.add("float-end", "text-muted");
+            sizeElement.innerText = zipInfo["_size"];
+            itemElement.appendChild(sizeElement);
+
+            element.appendChild(itemElement);
+
+            if (zipInfo["_isdir"]) {
+                let childrenElement = document.createElement("ol");
+                childrenElement.classList.add("list-group", "list-group-numbered", "list-group-flush");
+                nestedListFromZip(childrenElement, zipInfo);
+                element.appendChild(childrenElement);
+            } else
+                itemElement.addEventListener("click", onClickZipEntry);
+        }
+    }
+
+    function onClickZipEntry(event) {
+        let queryString = new URLSearchParams();
+        queryString.append('path', elementFile.path);
+        queryString.append('entry', event.target.attributes["data-name"].value);
+        window.open("/zip?" + queryString, "_blank");
+    }
+    </script>
+{% endblock %}

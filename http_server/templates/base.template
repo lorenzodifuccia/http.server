@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"
+              rel="stylesheet"
+              integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx"
+              crossorigin="anonymous">
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+
+        <title>{% block title %}{% endblock %}</title>
+    {% endblock %}
+</head>
+<body>
+{% block body %}
+    <div class="container py-2">
+        <!-- Header -->
+        <header>
+            <div class="p-2 mx-auto text-center text-break" style="max-width: 85%">
+                <h1 class="display-5 fw-bold">{{ element.name }}</h1>
+            </div>
+            <div class="d-flex flex-row flex-wrap justify-content-center align-items-center pb-2 mb-4 border-bottom">
+                    <button id="back-btn" title="Back" class="{{ "d-none d-lg-block" if element.isroot else "" }} order-3 order-lg-1 btn btn-light mt-2 mt-lg-0 me-4 me-lg-1 fs-4" style="border-radius: 2rem; border-color: black; {{ "visibility: hidden;" if element.isroot else "" }}">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <a title="Home" href="/" class="{{ "d-none" if element.isroot else "" }} order-4 order-lg-3 btn btn-outline-dark mt-2 mt-lg-0 me-4 me-lg-0 fs-4" style="border-radius: 2rem; {{ "visibility: hidden;" if element.isroot else "" }}">
+                        <i class="bi bi-house"></i>
+                    </a>
+
+                    <div class="order-1 order-lg-4 flex-grow-1 text-center text-muted text-break fs-6" style="max-width: 80%"><b>Path:</b> <i>{{ element.path }}</i></div>
+
+                    {% if element.isdir %}
+                    <button title="Upload" class="order-last btn btn-dark mt-2 mt-lg-0 fs-4" style="border-radius: 2rem;" data-bs-toggle="modal" data-bs-target="#upload-modal">
+                        <i class="bi bi-upload"></i>
+                    </button>
+                    {% else %}
+                    <button id="download-btn" title="Download" class="order-last btn btn-primary mt-2 mt-lg-0 fs-4" style="border-radius: 2rem;">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    {% endif %}
+
+                    <div class="order-2 d-lg-none" style="flex-basis: 100%;"></div>
+                </div>
+        </header>
+
+        <!-- Main -->
+        <main>
+            {% block main %}{% endblock %}
+        </main>
+
+        <!-- Upload Modal -->
+        <div class="modal fade" id="upload-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header justify-content-center" style="border-bottom: 0;">
+                        <h4 class="modal-title fw-bold">Upload:</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="mb-3">
+                                <label for="upload-file-input" class="form-label">Select file:</label>
+                                <input id="upload-file-input" class="form-control" type="file" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="upload-path-input" class="form-label">Where:</label>
+                                <input id="upload-path-input" class="form-control" type="text" value="{{ element.basedir }}" aria-describedby="upload-path-help" required>
+                                <div id="upload-path-help" class="form-text">Will create subdirectories if don't exist.<br>Cannot go back after the serving directory.</div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer" style="border-top: 0;">
+                        <button type="button" class="btn btn-outline-dark" style="border-radius: 2rem;" title="Cancel" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button id="upload-save-btn" type="button" class="btn btn-dark" title="Upload" style="border-radius: 2rem;">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
+            crossorigin="anonymous"></script>
+
+    <script>
+        const uploadModal = new bootstrap.Modal('#upload-modal'),
+            uploadFileInput = document.getElementById("upload-file-input"),
+            uploadPathInput = document.getElementById("upload-path-input");
+
+        document.getElementById("directory-list")?.addEventListener("click", function (event) {
+            let location;
+            if (event.target.parentElement instanceof HTMLLIElement)
+                location = event.target.parentElement.attributes["data-name"].value;
+            else
+                location = event.target.attributes["data-name"].value;
+
+            window.location = window.location.pathname.replace(/\/+$/, "") + "/" + location;
+        });
+
+        document.getElementById("back-btn")?.addEventListener("click", function () {
+            window.location = window.location.pathname.replace(/\/+$/, "").replace(/[^/]+$/, "")
+        });
+
+        document.getElementById("download-btn")?.addEventListener("click", function () {
+            window.location = window.location.pathname + "?download=true"
+        });
+
+        uploadFileInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") e.preventDefault() });
+        uploadPathInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") e.preventDefault() });
+
+        document.getElementById("upload-save-btn")?.addEventListener("click", function () {
+            if (!uploadFileInput.files.length)
+                return
+
+            let formData = new FormData();
+            formData.append('file', uploadFileInput.files[0])
+            formData.append('path', uploadPathInput.value)
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+                .then(
+                    resp => resp.json()
+                )
+                .then((resp) => {
+                    uploadModal?.hide();
+                    if (resp.status) {
+                        alert("Uploaded!");
+                        window.location.reload();
+
+                    } else
+                        alert("Error: " + resp.error)
+                })
+                .catch((err) => {
+                    uploadModal?.hide();
+                    alert("Error: " + err)
+                })
+        });
+    </script>
+    {% block postscript %}{% endblock %}
+{% endblock %}
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.template" %}
+{% block title %}Listing: {{ element.name }}{% endblock %}
+
+{% macro get_icon(item) %}
+    {%- set ext = item.name.split(".")[-1].lower() -%}
+    {%- set mime = item.mime if item.mime else "" -%}
+    {%- if ext == "epub" -%} bi-file-earmark-text
+    {%- elif ext == "pdf" -%} bi-file-earmark-pdf
+    {%- elif ext == "zip" or mime == "application/x-tar" -%} bi-file-earmark-zip
+    {%- elif mime.startswith("image")  -%} bi-file-earmark-image
+    {%- elif mime.startswith("video")  -%} bi-file-earmark-play
+    {%- elif mime.startswith("audio")  -%} bi-file-earmark-music
+    {%- else -%} bi-file-earmark bi-filetype-{{ ext }}
+    {%- endif -%}
+{% endmacro %}
+
+{% block main %}
+<ul id="directory-list" class="list-group">
+    {% for item in element.children %}
+    <li class="list-group-item list-group-item-action d-flex flex-column flex-lg-row py-1" data-name="{{ item.name }}" title="{{ item.path }}">
+        <div class="flex-grow-1 text-break">
+            <i class="bi {{ "bi-folder-fill" if item.isdir else get_icon(item) }} me-2" style="font-size:1.2rem;"></i>
+            {{ item.name }}
+        </div>
+        <em class="my-auto text-end text-muted" style="font-size: 0.93rem">{{ item.mtime|datetime_humanize }} • {{ item.size|filesizeformat }}</em>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
