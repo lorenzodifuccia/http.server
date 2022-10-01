@@ -20,7 +20,7 @@ Features:
 
 <br/><br/>
 
-- > _Dev Tips_: force to view a zip-like file by passing `#zip` in the URL 😉
+> _Dev Tips_: force to view a zip-like file by passing `#zip` in the URL 😉
 <p align="middle"><img src="https://github.com/lorenzodifuccia/cloudflare/raw/master/Images/http.server/zip-like.gif" title="Listing" width="80%" /></p>
 
 <br/>
@@ -85,7 +85,7 @@ This project has the following dependencies:
 
 ## Future
 Known issues:
-- HTML5 and Browsers does not fully support `.mkv` files
+- HTML5 and Browsers do not fully support `.mkv` files
 
 <br/>
 
